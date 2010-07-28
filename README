@@ -4,10 +4,10 @@ They'll appear shortly.
 Once they're available, usage of this class is simple.
 
 As a command line utility:
-./sqlitefs.py ~/.config/chromium/Defaults/History /tmp/ChromiumHistory
+./sqlitefs.py ~/.config/chromium/Default/History /tmp/ChromiumHistory
 
 As a code object:
 sqlitefs = system.Code("/System/Storage.lib/Filesystems/sqlitefs/sqlitefs.py")['SqliteFilesystem']
-fs = sqlitefs("~/.config/chromium/Defaults/History").attach("/tmp/ChromiumHistory")
+fs = sqlitefs("~/.config/chromium/Default/History").attach("/tmp/ChromiumHistory")
 
 

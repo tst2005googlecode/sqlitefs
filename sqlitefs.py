@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
+# Date: 07-28-2010
+# Author: Joshua Short <joshua.short@gmail.com>
+# Description: Class for File System Access to a Sqlite Database
 
 # The structure, or entities, of a a sqlite database:
 STRUCTURE = ('table', 'index', 'trigger')

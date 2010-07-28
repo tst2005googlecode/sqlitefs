@@ -58,6 +58,7 @@ class SqliteFilesystem(Filesystem):
 	    
 	    # Open a connection to a sqlite file -- allow access by separate threads
 	    self.db = sqlite3.connect(location or ":memory:", check_same_thread=False)
+            self.db.text_factory = str#lambda x: x.encode("utf-8")
 	    
 	# __getitem__ retrieves items from the file system which match the requested path
 	def __getitem__(self, path, fh=None):
@@ -123,8 +124,8 @@ class SqliteFilesystem(Filesystem):
 			# the response is the value of the requested column
 			# TODO: fix to work with row/column paradigm
 			# TODO: make the column name a file which has the value of the column field
-			for value in self.db.execute("SELECT %s FROM %s WHERE rowid=?" % (query[4], query[2]), (query[3])):
-			  response.append(str(value[0]))
+			for value in self.db.execute("SELECT %s FROM %s WHERE rowid=?" % (query[4], query[2]), (query[3],)):
+			  response.append(unicode(value[0], "utf-8").encode('utf-8'))
 		
 	    # return whatever files were rounded up
 	    # NOTE: might be best to make an actual error condition (ENOENT) and return within branches

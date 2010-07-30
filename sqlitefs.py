@@ -11,41 +11,43 @@
 ###############################################################################
 # Completed Functionality
 ###############################################################################
-# In its current state, the following features work:
-#  viewing database structure:
-#    $ ls /
-#    $ ls /tables
-#    $ ls /tables/<table_name>
-#    $ ls /tables/<table_name>/<rowid>
-#    $ ls /tables/<table_name>/<rowid>/<column_name>
+# viewing database structure:
+#   $ ls /
+#   $ ls /tables
+#   $ ls /tables/<table_name>
+#   $ ls /tables/<table_name>/<rowid>
+#   $ ls /tables/<table_name>/<rowid>/<column_name>
 
 
-
-# The current construction backlog:
-#  removing items from a table:
-#    $ rm /tables/<table_name>/<rowid>
-#  removing tables from a database:
-#    $ rm /tables/<table_name>
-#  allow tables to be viewed by rows or columns:
-#    $ ls /tables/rows/<rowid>/<column_name>
-#    $ ls /tables/columns/<column_name>/<rowid>
+###############################################################################
+# Planned Functionality
+###############################################################################
+# removing items from a table:
+#   $ rm /tables/<table_name>/<rowid>
+#
+# removing tables from a database:
+#   $ rm /tables/<table_name>
+#
+# allow tables to be viewed by rows or columns:
+#   $ ls /tables/rows/<rowid>/<column_name>
+#   $ ls /tables/columns/<column_name>/<rowid>
 
 
 # This module has a light dependency on the system's ability to load code
 from system import Code
 
 
-# there are three types of primary structures found in a sqlite database:
+# there are three primary structures found in a sqlite database:
 STRUCTURES = [
-  # type  , display_name
-  ('table', "tables"),
-  ('index', "indexes"),
-  ('trigger', "triggers"),
+  #  type          name
+  ( 'table'    ,  "tables"   ),
+  ( 'index'    ,  "indexes"  ),
+  ( 'trigger'  ,  "triggers" ),
 ]
 
 
-# this method represents the structure of a sqlite database as a dictionary
-# TODO: implement as auto-updating cache
+# TODO: event-based cache
+# this method presents the structure of a sqlite database as a dictionary
 def get_structure(db):
   return dict([
     (display, db.execute("SELECT * FROM sqlite_master WHERE type=?", (type,)).fetchall())
@@ -75,18 +77,14 @@ class SqliteFilesystem(Filesystem):
     self.db.text_factory = lambda x: x.encode("utf-8")
 
 
-  # XXX: fuse barfs with this ... need to restructure ... slightly
-  #def __call__(self, path):
-  #  print "Call: %s" % path
-
   # __getitem__ retrieves items from the file system which match the requested path
   def __getitem__(self, path, fh=None):
     
     # The Filesystem class provides a simple query processing method: splitting on '/'
     query = process_query(path)
     
-    # this will be *TEMPORARILY* used as an error flag
-    response = ["XXX"]
+    # if no response is set by the time the function returns, raise an exception
+    response = None
 
     # the root directory was requested
     if path == "/":
@@ -113,7 +111,7 @@ class SqliteFilesystem(Filesystem):
 	  response = [str(name) for type, name, target, id, string in get_structure(self.db)[query[1]]]
 
 
-      # the query is of type /<feature>/<object>
+      # the query is of type /<feature>/<member>
       elif len(query) == 3:
 	
 	# currently, the only meaningful feature is 'tables'
@@ -121,7 +119,7 @@ class SqliteFilesystem(Filesystem):
 	response = [str(item[0]) for item in self.db.execute("SELECT rowid FROM %s" % (query[2]))]
 
 
-      # the query is of type /<feature>/<object>/<value>
+      # the query is of type /<feature>/<member>/<value>
       elif len(query) == 4:
 	
 	# the only <object> this works for is 'tables'
@@ -142,10 +140,10 @@ class SqliteFilesystem(Filesystem):
 	      for field in item[4][item[4].find('('):][1:-1].split(','):
 		
 		# a valid definition will be of name TYPE
-		if len(str(field).strip().split(' ')) > 1:
+		if len(str(field).strip().split()) > 1:
 		  
 		  # add the column to the list of 'files'
-		  response.append(str(field).strip().split(' ')[0])
+		  response.append(str(field).strip().split()[0])
 	      
       # the query is of type /<feature>/<object>/<value>/<column>
       elif len(query) == 5:
@@ -161,7 +159,10 @@ class SqliteFilesystem(Filesystem):
       
     # return whatever files were rounded up
     # NOTE: might be best to make an actual error condition (ENOENT) and return within branches
-    return response
+    if response is None:
+      raise OSError("No response for query: %s" % path)
+    else:
+      return response
 
 
 import sys

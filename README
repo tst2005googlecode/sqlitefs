@@ -1,13 +1,17 @@
-Only a couple of files are missing which are necessary to get this class to work.
-They'll appear shortly.
-
-Once they're available, usage of this class is simple.
+sqlitefs is a file system adapter which alows a sqlite database to be accessed as a file system node.
 
 As a command line utility:
-./sqlitefs.py ~/.config/chromium/Default/History /tmp/ChromiumHistory
+$ sqlitefs.py ~/.config/f-spot/photos.db /tmp/f-spot
+
+$ ls /tmp/f-spot
+< indexes tables triggers
+
+$ ls /tmp/f-spot/tables
+< exports jobs meta photos photo_tags photo_versions rolls sqlite_sequence tags
+
+$ ls /tmp/f-spot/tables/tags/*/name
+Favorites Hidden People Places Events
 
 As a code object:
-sqlitefs = system.Code("/System/Storage.lib/Filesystems/sqlitefs/sqlitefs.py")['SqliteFilesystem']
-fs = sqlitefs("~/.config/chromium/Default/History").attach("/tmp/ChromiumHistory")
-
-
+>>> sqlitefs = system.Code("/System/Filesystems/sqlitefs/sqlitefs.py")['SqliteFilesystem']
+>>> fs = sqlitefs("~/.config/f-spot/photos.db").attach("/tmp/f-spot")

@@ -11,27 +11,53 @@
 ###############################################################################
 # Completed Functionality
 ###############################################################################
-# viewing database structure:
-#   $ ls /
-#   $ ls /tables
-#   $ ls /tables/<table_name>
-#   $ ls /tables/<table_name>/<rowid>
-#   $ ls /tables/<table_name>/<rowid>/<column_name>
+# view database structure
+# $ ls /
+#
+# view indexes
+# $ ls /indexes
+#
+# view tables
+# $ ls /tables
+#
+# view triggers
+# $ ls /triggers
 
 
 ###############################################################################
 # Planned Functionality
 ###############################################################################
-# removing items from a table:
-#   $ rm /tables/<table_name>/<rowid>
+# view table rows :: row_id -> column_names -> value
+# $ ls /tables/<table>?rows
 #
-# removing tables from a database:
-#   $ rm /tables/<table_name>
+# view tables by columns :: column_names -> row_id -> value
+# $ ls /tables/<table>?columns
 #
-# allow tables to be viewed by rows or columns:
-#   $ ls /tables/rows/<rowid>/<column_name>
-#   $ ls /tables/columns/<column_name>/<rowid>
-
+# view index items (not officially supported by sqlite, but it can be accomplished
+# by constructing a query which will hit the index as it is defined).
+#  column_names -> rowid -> value
+#  row_ids -> column_name -> value
+#
+# add rows to a table (possible issue with non-NULL-able columns, so some serialization form is necesary
+# $ $(echo "value1") $(echo "value2) > /tables/<table_name>?rows
+#
+# add columns to a table
+# $ echo "name" > /tables/<table_name>?columns
+#
+# remove rows from a table
+# $ rm /tables/<table_name>?rows/<row_id>
+#
+# remove columns from a table
+# $ rm /tables/<table_name>?columns/<column_name>
+# 
+# remove tables from a database
+# $ rm /tables/<table_name>
+#
+# remove indexes from a database
+# $ rm /indexes/<index_name>
+#
+# remove triggers from a database
+# $ rm /triggers/<trigger_name>
 
 # This module has a light dependency on the system's ability to load code
 from system import Code
@@ -127,23 +153,35 @@ class SqliteFilesystem(Filesystem):
 	# this means we're getting something like /tables/<table_name>/<rowid>
 	# and returning the columns that this rowid has
 	response = []
-	
-	# TODO: first, should check to see that the requested table exists
-	# first, make sure the given rowid exists in the table
-	if self.db.execute("SELECT COUNT(*) FROM %s WHERE rowid=?" % (query[2]), (query[3],)).fetchone() > 0:
-	  for item in get_structure(self.db)[query[1]]:
-	    
-	    # make sure the requested table exists
-	    if item[1] == query[2]:
+	function_start = False
+	# confirm that the requested table exists
+	# NOTE: the item variable will persist into the block
+	items = [item for item in get_structure(self.db)[query[1]] if item[1] == query[2]]
+	if len(items) == 1:
+	  item = items[0]
+	  
+	  # make sure the given rowid exists in the table
+	  if self.db.execute("SELECT COUNT(*) FROM %s WHERE rowid=?" % (query[2]), (query[3],)).fetchone() > 0:
 	      
-	      # find all the column_names
-	      for field in item[4][item[4].find('('):][1:-1].split(','):
+	    # parse the creation string for the available fields
+	    for field in item[4][item[4].find('('):][1:-1].split(','):
+	      
+	      # determine which fields to drop (occurring inside special functions)
+	      if field.find('(') >= 0:
+		print "starting"
+		function_start = True
+	      
+	      if function_start:
+		if field.find(')') >= 0:
+		  print "stopping"
+		  function_start = False
+		  continue
 		
-		# a valid definition will be of name TYPE
-		if len(str(field).strip().split()) > 1:
+	      if not function_start:
+
+		# add the column to the list of 'files'
+		response.append(str(field).strip().split()[0])
 		  
-		  # add the column to the list of 'files'
-		  response.append(str(field).strip().split()[0])
 	      
       # the query is of type /<feature>/<object>/<value>/<column>
       elif len(query) == 5:
@@ -157,7 +195,7 @@ class SqliteFilesystem(Filesystem):
 	for value in self.db.execute("SELECT %s FROM %s WHERE rowid=?" % (query[4], query[2]), (query[3],)):
 	  response.append(str(value[0]))
       
-    # return whatever files were rounded up
+    # return whichever files were selected
     # NOTE: might be best to make an actual error condition (ENOENT) and return within branches
     if response is None:
       raise OSError("No response for query: %s" % path)

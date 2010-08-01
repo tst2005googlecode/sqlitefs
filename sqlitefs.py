@@ -9,7 +9,7 @@
 
 
 ###############################################################################
-# Completed Functionality
+# Implemented Features
 ###############################################################################
 # view database structure
 # $ ls /
@@ -25,7 +25,7 @@
 
 
 ###############################################################################
-# Planned Functionality
+# Unimplemented Features
 ###############################################################################
 # view table rows :: row_id -> column_names -> value
 # $ ls /tables/<table>?rows
@@ -103,8 +103,11 @@ class SqliteFilesystem(Filesystem):
     self.db.text_factory = lambda x: x.encode("utf-8")
 
 
-  # __getitem__ retrieves items from the file system which match the requested path
-  def __getitem__(self, path, fh=None):
+  def __del__(self, path):
+    pass
+
+  # __call__ retrieves items from the file system which match the requested path
+  def __call__(self, path, fh=None):
     
     # The Filesystem class provides a simple query processing method: splitting on '/'
     query = process_query(path)
